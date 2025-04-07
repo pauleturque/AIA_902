@@ -24,6 +24,8 @@ episode_rewards = []
 for episode in range(EPISODES):
     state = env.reset()
     processed_state = preprocess_state(state)  # Prétraitement img
+    print("Processed State:", processed_state)
+
     discrete_state = discretize_state(processed_state, agent.state_size)  # Discrétisation état
     print(f"Episode  {episode} / {EPISODES} ")
 
@@ -42,6 +44,12 @@ for episode in range(EPISODES):
         # MàJ Q-table
         agent.update_q_table(discrete_state, action, reward, new_discrete_state)
 
+        # Affichage rewards/punitions à chaque étape
+        if reward > 0:
+            print(f"   Récompense : {reward}")
+        elif reward < 0:
+            print(f"   Punition : {reward}")
+
         # etat suivant
         discrete_state = new_discrete_state
         total_reward += reward
@@ -53,9 +61,8 @@ for episode in range(EPISODES):
     episode_rewards.append(total_reward)
     print(f"Épisode {episode + 1}/{EPISODES}, Score: {total_reward}, EPSILON: {agent.epsilon:.4f}")
 
-    # sauvegarde qtable après 100 épisodes
-    if episode % 100 == 0:
-        save_q_table(agent.q_table)
+    # sauvegarde qtable après chaque épisode
+    save_q_table(agent.q_table)
 
 env.close()
 

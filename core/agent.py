@@ -22,7 +22,8 @@ class QLearningAgent:
 
     # appli formule q-learning / màj q table
     def update_q_table(self, state, action, reward, new_state):
-        if not (0 <= new_state[0] < self.state_size[0] and 0 <= new_state[1] < self.state_size[1]):
+        # Vérification des limites des indices
+        if not np.all([0 <= new_state[0] < self.state_size[0], 0 <= new_state[1] < self.state_size[1]]):
             print(f"ERREUR: new_state {new_state} hors limites")
             return
 
