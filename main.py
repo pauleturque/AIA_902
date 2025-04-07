@@ -1,103 +1,69 @@
-import gymnasium as gym
-import ale_py
-import numpy as np
-import random
-import cv2
-import matplotlib.pyplot as plt
+import os
+os.environ["SDL_AUDIODRIVER"] = "dummy"
 
-from ale_py import ALEInterface
-ale = ALEInterface()
+from core.agent import QLearningAgent
+from envs.environment import Environment
+from utils.file_manager import save_q_table, load_q_table
+from utils.preprocessing import preprocess_state
+from utils.state_processing import discretize_state
+from ui.display import plot_rewards
 
-gym.register_envs(ale_py)
+# Init env et agent
+env = Environment(render_mode="human")
+agent = QLearningAgent(state_size=(20, 20), num_actions=env.num_actions)
 
-env = gym.make('ALE/Pong-v5', render_mode="human")
+# Chargement Q-table
+saved_q_table = load_q_table()
+if saved_q_table is not None:
+    agent.q_table = saved_q_table
 
-# Paramètres agent
-alpha = 0.1  # Taux d'apprentissage
-gamma = 0.9  # Facteur de discount
-epsilon = 0.1  # Exploration exploitation
-num_episodes = 1000
-
-num_actions = env.action_space.n
-
-# Initialisation de la Q-table
-state_space_size = 6  # Choisis une taille appropriée pour l'espace d'état discretisé
-Q = np.zeros((state_space_size, num_actions))
-
-# Fonction de prétraitement de l'image
-def preprocess_state(state):
-    gray = cv2.cvtColor(state, cv2.COLOR_RGB2GRAY)
-    resized = cv2.resize(gray, (40, 40), interpolation=cv2.INTER_AREA)
-    return resized.flatten()  # Aplatir l'image traitée
-
-
-# Discrétisation de l'état : mapper l'état continu vers un espace discret
-def discretize_state(state):
-    # Normalise l'état entre 0 et 1
-    state = state / 255.0
-    # Aplatit image en 1D
-    flattened_state = state.flatten()
-
-    # Calcul indice discret pour cet état
-    state_idx = int(np.sum(flattened_state) % state_space_size)  # Juste un exemple simple
-    return state_idx
-
-
-# Fonction epsilon-greedy pour choisir une action
-def choose_action(state, epsilon):
-    state_idx = discretize_state(state)  # Discrétiser état
-    if random.uniform(0, 1) < epsilon:
-        return env.action_space.sample()  # Exploration
-    else:
-        return np.argmax(Q[state_idx])  # Exploitation
-
-# Stockage score de chaque épisode
+#apprentissage
+EPISODES = 1000
 episode_rewards = []
 
-# Eentraînement agent
-for episode in range(num_episodes):
-    state, info = env.reset()
-    state = preprocess_state(state)  # Prétraitement état
+for episode in range(EPISODES):
+    state = env.reset()
+    processed_state = preprocess_state(state)  # Prétraitement img
+    print("Processed State:", processed_state)
+
+    discrete_state = discretize_state(processed_state, agent.state_size)  # Discrétisation état
+    print(f"Episode  {episode} / {EPISODES} ")
+
     total_reward = 0
     done = False
+
     while not done:
-        # Choix l'action
-        action = choose_action(state, epsilon)
+        # choix action
+        action = agent.choose_action(discrete_state)
 
-        # Aaction est valide
-        if action < 0 or action >= env.action_space.n:
-            action = random.randint(0, env.action_space.n - 1)
+        # exécution
+        new_state, reward, done = env.step(action)
+        processed_new_state = preprocess_state(new_state)
+        new_discrete_state = discretize_state(processed_new_state, agent.state_size)
 
-        # Appliquer action dans l'environnement
-        next_state, reward, terminated, truncated, info = env.step(action)
+        # MàJ Q-table
+        agent.update_q_table(discrete_state, action, reward, new_discrete_state)
 
-        # Prétraitement du nouvel état
-        next_state = preprocess_state(next_state)
+        # Affichage rewards/punitions à chaque étape
+        if reward > 0:
+            print(f"   Récompense : {reward}")
+        elif reward < 0:
+            print(f"   Punition : {reward}")
 
-        # Discrétiser l'état suivant
-        state_idx = discretize_state(state)
-        next_state_idx = discretize_state(next_state)
-
-        # Mise à jour Q-table
-        best_next_action = np.argmax(Q[next_state_idx])
-        Q[state_idx, action] = Q[state_idx, action] + alpha * (
-                    reward + gamma * Q[next_state_idx, best_next_action] - Q[state_idx, action])
-
-        # Passer à l'état suivant
-        state = next_state
+        # etat suivant
+        discrete_state = new_discrete_state
         total_reward += reward
 
-        if terminated or truncated:
-            break
+    # diminution explo epsilon
+    agent.decay_epsilon()
 
-    episode_rewards.append(total_reward)  # Ajoute la récompense de l'épisode à la liste
-    print(f"Episode {episode + 1}/{num_episodes} finished with total reward: {total_reward}")
+    # sauvegarde recwards
+    episode_rewards.append(total_reward)
+    print(f"Épisode {episode + 1}/{EPISODES}, Score: {total_reward}, EPSILON: {agent.epsilon:.4f}")
 
-# Traçage graphique des scores
-plt.plot(episode_rewards)
-plt.title('Performance de l\'agent au fil des épisodes')
-plt.xlabel('Épisodes')
-plt.ylabel('Récompense totale')
-plt.show()
+    # sauvegarde qtable après chaque épisode
+    save_q_table(agent.q_table)
 
 env.close()
+
+plot_rewards(episode_rewards)
