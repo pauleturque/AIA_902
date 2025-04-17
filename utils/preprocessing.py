@@ -21,7 +21,7 @@ def preprocess_state(state):
     top_border = int(height * 0.16)  # supprime 20% de la hauteur totale
     bottom_border = int(height * 0.93) # idem en bas
 
-    print(f"Zone de jeu : top_border = {top_border}, bottom_border = {bottom_border}")
+    #print(f"Zone de jeu : top_border = {top_border}, bottom_border = {bottom_border}")
 
     # Limites visuelles de la zone de jeu
     cv2.rectangle(state, (0, top_border), (width, bottom_border), (0, 0, 255), 2)  # zone de jeu
@@ -37,20 +37,20 @@ def preprocess_state(state):
         x, y, w, h = cv2.boundingRect(contour)
 
         # Affiche les contours détectés en temps réel
-        #print(f"Contour trouvé - X: {x}, Y: {y}, Width: {w}, Height: {h}")
+        #print(f"Contour - X: {x}, Y: {y}, Width: {w}, Height: {h}")
 
         # contour dans la zone de jeu valide
         if y < top_border or y + h > bottom_border:
-            #print(f"Contour hors zone de jeu exclu - X: {x}, Y: {y}, Width: {w}, Height: {h}")
+            #print(f"Contour hors zone de jeu  - X: {x}, Y: {y}, Width: {w}, Height: {h}")
             continue
 
         # Filtrage  taille des objets
-        if w < 5 and h < 5:  # balle carré
+        if 1 <= w <= 4 and 1 <= h <= 4:  # balle carréé
             ball_position = (x, y)
-            print(f"Balle détectée - X: {x}, Y: {y}")
-        elif 10 < w < 30 and 60 < h < 80:
+            #print(f"Balle détectée - X: {x}, Y: {y}")
+        if 2 <= w <= 6 and 10 <= h <= 30:
             paddle_positions.append((x, y))
-            print(f"Raquette détectée - X: {x}, Y: {y}")
+            #print(f"Raquette détectée - X: {x}, Y: {y}")
 
     # Normalisation pour éviter dépassements
     max_x, max_y = 210, 160
@@ -65,15 +65,15 @@ def preprocess_state(state):
 
     # positions finales
     #print(f"Balle (normalisée) - X: {scaled_ball_x}, Y: {scaled_ball_y}")
-    #print(f"Raquettes (normalisées) - {paddle_positions_scaled}")
+    #rint(f"Raquettes (normalisées) - {paddle_positions_scaled}")
 
     # Dessiner les rectangles autour de la balle et des raquettes
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         if y >= top_border and y + h <= bottom_border:
-            if w < 5 and h < 5:  # Balle
+            if 1 <= w <= 4 and 1 <= h <= 4:  # Balle
                 cv2.rectangle(state, (x, y), (x + w, y + h), (0, 0, 255), 2)  # rouge
-            elif  w < 5 and 10 < h < 80:  # Raquettes
+            elif 2 <= w <= 6 and 10 <= h <= 30:  # Raquettes
                 if x < 40:  # Raquette gauche
                     cv2.rectangle(state, (x, y), (x + w, y + h), (0, 255, 255), 2)  # Jaune
                 else:  # Raquette droite

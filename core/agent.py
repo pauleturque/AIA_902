@@ -2,7 +2,7 @@ import numpy as np
 import random
 
 class QLearningAgent:
-    def __init__(self, state_size, num_actions, learning_rate=0.1, discount=0.95, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.01):
+    def __init__(self, state_size, num_actions, learning_rate=0.3, discount=0.95, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.01):
         self.state_size = state_size
         self.num_actions = num_actions
         self.learning_rate = learning_rate
@@ -12,7 +12,10 @@ class QLearningAgent:
         self.epsilon_min = epsilon_min
 
         # init Q-table
-        self.q_table = np.random.uniform(low=-2, high=0, size=(20, 20, num_actions))
+        self.q_table = np.random.uniform(low=-2, high=0, size=(80, 80, num_actions))
+
+
+
 
     #choix action en fonction d'epsilon
     def choose_action(self, state):
